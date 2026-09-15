@@ -27,6 +27,14 @@ jobs:
       - name: Install dependencies
         run: cd NeuroDePIN/neuro_app && flutter pub get
 
+      - name: Fix telephony package namespace issue
+        run: |
+          FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
+          if [ -f "$FILE" ]; then
+            echo "Adding namespace to telephony package..."
+            sed -i '/android {/a \    namespace "com.roughike.telephony"' "$FILE"
+          fi
+
       - name: Build APK
         run: cd NeuroDePIN/neuro_app && flutter build apk --release
 
