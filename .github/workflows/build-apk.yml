@@ -27,16 +27,16 @@ jobs:
       - name: Install dependencies
         run: cd NeuroDePIN/neuro_app && flutter pub get
 
-      - name: Fix telephony package namespace issue
+      - name: Fix telephony package namespace and JVM target
         run: |
           FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
           if [ -f "$FILE" ]; then
-            echo "Adding namespace to telephony package..."
-            sed -i '/android {/a \    namespace "com.roughike.telephony"' "$FILE"
+            echo "Adding namespace and fixing JVM target in telephony package..."
+            sed -i '/android {/a \    namespace "com.roughike.telephony"\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n    kotlinOptions {\n        jvmTarget = "1.8"\n    }' "$FILE"
           fi
 
       - name: Build APK
-        run: cd NeuroDePIN/neuro_app && flutter build apk --release --target-platform android-arm64
+        run: cd NeuroDePIN/neuro_app && flutter build apk --release
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
