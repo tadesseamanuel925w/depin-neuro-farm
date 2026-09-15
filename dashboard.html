@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="am">
+<head>
+    <meta charset="UTF-8">
+    <title>DePIN Neuro-Farm Manager</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #1e1e2e; color: #fff; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background-color: #2b2b3d; padding: 15px 25px; border-radius: 10px; margin-bottom: 20px; }
+        .add-btn { background-color: #00b4d8; color: white; border: none; padding: 12px 20px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .add-btn:hover { background-color: #90e0ef; color: #000; }
+        .node-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }
+        .node-card { background-color: #2b2b3d; border-top: 4px solid #00b4d8; border-radius: 8px; padding: 15px; }
+        .status-badge { background-color: #2ec4b6; color: #000; padding: 3px 8px; border-radius: 4px; font-size: 12px; font-weight: bold; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); justify-content: center; align-items: center; }
+        .modal-content { background: #2b2b3d; padding: 25px; border-radius: 10px; width: 350px; }
+        .modal-content input { width: 92%; padding: 10px; margin: 8px 0; border-radius: 5px; border: 1px solid #444; background: #1e1e2e; color: #fff; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h2>🚀 DePIN Neuro-Farm Manager</h2>
+    <div>
+        <span id="ram-status" style="margin-right:15px; font-weight:bold; color:#00b4d8;">RAM: Loading...</span>
+        <button class="add-btn" onclick="openModal()">+ አዲስ ኖድ ጨምር</button>
+    </div>
+</div>
+
+<div class="node-grid" id="nodeContainer"></div>
+
+<div class="modal" id="addModal">
+    <div class="modal-content">
+        <h3>አዲስ ኖድ ማገናኛ</h3>
+        <input type="text" id="nodeId" placeholder="Node Name (e.g. Node_1)">
+        <input type="text" id="grassToken" placeholder="Grass Token ID">
+        <input type="text" id="nodepayToken" placeholder="Nodepay Token">
+        <input type="text" id="blockmeshToken" placeholder="BlockMesh Email/Token">
+        <button class="add-btn" style="width:100%; margin-top:10px;" onclick="submitNode()">ኖድ ፍጠር & Connect አድርግ</button>
+        <button class="add-btn" style="width:100%; margin-top:5px; background-color:#e63946;" onclick="closeModal()">ዝጋ</button>
+    </div>
+</div>
+
+<script>
+    const API = "http://localhost:8000";
+
+    async function loadStatus() {
+        try {
+            const res = await fetch(`${API}/system-status`);
+            const data = await res.json();
+            document.getElementById('ram-status').innerText = `RAM: ${data.used_ram_mb}MB / ${data.total_ram_mb}MB (${data.ram_percentage}%)`;
+        } catch(e) { console.log(e); }
+    }
+
+    async function loadNodes() {
+        try {
+            const res = await fetch(`${API}/list-nodes`);
+            const nodes = await res.json();
+            const container = document.getElementById('nodeContainer');
+            container.innerHTML = "";
+
+            for (let id in nodes) {
+                container.innerHTML += `
+                    <div class="node-card">
+                        <h3>${id} <span class="status-badge">${nodes[id].quality_score} Score</span></h3>
+                        <p><b>Status:</b> ${nodes[id].status}</p>
+                        <p><b>Virtual Modem:</b> ${nodes[id].assigned_vmodem}</p>
+                        <p><b>RAM Limit:</b> ${nodes[id].ram_limit}</p>
+                        <button style="background:#e63946; color:#fff; border:none; padding:6px 12px; border-radius:4px; cursor:pointer;" onclick="deleteNode('${id}')">አጥፋ</button>
+                    </div>
+                `;
+            }
+        } catch(e) { console.log(e); }
+    }
+
+    function openModal() { document.getElementById('addModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('addModal').style.display = 'none'; }
+
+    async function submitNode() {
+        const id = document.getElementById('nodeId').value;
+        const grass = document.getElementById('grassToken').value;
+        const nodepay = document.getElementById('nodepayToken').value;
+        const blockmesh = document.getElementById('blockmeshToken').value;
+
+        if(!id) return alert("እባክዎን Node Name ያስገቡ");
+
+        await fetch(`${API}/add-node`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ node_id: id, grass_token: grass, nodepay_token: nodepay, blockmesh_token: blockmesh })
+        });
+
+        closeModal();
+        loadNodes();
+    }
+
+    async function deleteNode(id) {
+        await fetch(`${API}/remove-node/${id}`, { method: 'DELETE' });
+        loadNodes();
+    }
+
+    setInterval(loadStatus, 3000);
+    loadStatus();
+    loadNodes();
+</script>
+
+</body>
+</html>
