@@ -27,18 +27,32 @@ jobs:
       - name: Install dependencies
         run: cd NeuroDePIN/neuro_app && flutter pub get
 
-      - name: Fix telephony package completely for AGP 8+
+      - name: Robustly Fix Telephony Package for AGP 8+
         run: |
-          GRADLE_FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
-          MANIFEST_FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/src/main/AndroidManifest.xml"
+          python3 -c '
+          import re
+          path = "/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
+          try:
+              with open(path, "r") as f:
+                  content = f.read()
+              
+              if "namespace" not in content:
+                  content = content.replace("android {", "android {\n    namespace \"com.shounakmulay.telephony\"")
+              
+              # Remove old SDK versions to inherit safely from root project
+              content = re.sub(r"minSdkVersion\s+\d+", "", content)
+              content = re.sub(r"targetSdkVersion\s+\d+", "", content)
+              
+              with open(path, "w") as f:
+                  f.write(content)
+              print("Successfully patched telephony build.gradle via Python")
+          except Exception as e:
+              print(f"Skipping patch: {e}")
+          '
           
-          if [ -f "$GRADLE_FILE" ]; then
-            echo "Adding namespace to telephony build.gradle..."
-            sed -i '/android {/a \    namespace "com.shounakmulay.telephony"\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n    kotlinOptions {\n        jvmTarget = "1.8"\n    }' "$GRADLE_FILE"
-          fi
-
+          # Clean manifest package attribute if present
+          MANIFEST_FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/src/main/AndroidManifest.xml"
           if [ -f "$MANIFEST_FILE" ]; then
-            echo "Removing obsolete package attribute from AndroidManifest.xml..."
             sed -i 's/package="[^"]*"/ /g' "$MANIFEST_FILE"
           fi
 
