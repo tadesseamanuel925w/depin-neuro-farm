@@ -27,12 +27,19 @@ jobs:
       - name: Install dependencies
         run: cd NeuroDePIN/neuro_app && flutter pub get
 
-      - name: Fix telephony package namespace and JVM target
+      - name: Fix telephony package completely for AGP 8+
         run: |
-          FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
-          if [ -f "$FILE" ]; then
-            echo "Adding namespace and fixing JVM target in telephony package..."
-            sed -i '/android {/a \    namespace "com.roughike.telephony"\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n    kotlinOptions {\n        jvmTarget = "1.8"\n    }' "$FILE"
+          GRADLE_FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/build.gradle"
+          MANIFEST_FILE="/home/runner/.pub-cache/hosted/pub.dev/telephony-0.2.0/android/src/main/AndroidManifest.xml"
+          
+          if [ -f "$GRADLE_FILE" ]; then
+            echo "Adding namespace to telephony build.gradle..."
+            sed -i '/android {/a \    namespace "com.shounakmulay.telephony"\n    compileOptions {\n        sourceCompatibility JavaVersion.VERSION_1_8\n        targetCompatibility JavaVersion.VERSION_1_8\n    }\n    kotlinOptions {\n        jvmTarget = "1.8"\n    }' "$GRADLE_FILE"
+          fi
+
+          if [ -f "$MANIFEST_FILE" ]; then
+            echo "Removing obsolete package attribute from AndroidManifest.xml..."
+            sed -i 's/package="[^"]*"/ /g' "$MANIFEST_FILE"
           fi
 
       - name: Build APK
